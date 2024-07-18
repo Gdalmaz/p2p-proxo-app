@@ -1,0 +1,48 @@
+version: "3"
+services:
+  app_postgres:
+    image: postgres:latest
+    restart: no
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - app_postgres_vol:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  Auth-App:
+    image: cosmtrek/air:v1.44.0
+    restart: no
+    working_dir: /app
+    volumes:
+     - ./Auth-App:/app
+     - ./.env:/app/.env
+    ports:
+      - "9090:80"
+    depends_on:
+      - app_postgres
+    environment:
+      GOFLAGS: "-buildvcs=false"
+    networks:
+      - app_network 
+
+  rabbitmq:
+    image: rabbitmq:latest
+    restart: no
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app_network
+
+volumes:
+  app_postgres_vol:
+  redis_data:
+
+networks:
+  app_network:
+    driver: bridge
