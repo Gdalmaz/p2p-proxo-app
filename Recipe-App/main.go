@@ -14,5 +14,5 @@ func main() {
 	app := fiber.New()
 	routers.RecipeControllers(app)
 	routers.GetRecipe(app)
-	app.Listen(":80")
+	app.Listen(":9091")
 }

@@ -38,12 +38,9 @@ func Connect() {
 	log.Println("connected success")
 	db.Logger = logger.Default.LogMode(logger.Info)
 	log.Println("running migrations")
-	err = db.AutoMigrate(&models.User{},
-		&models.Session{},
+	err = db.AutoMigrate(
 		&models.Box{},
-		&models.Product{},
 		&models.AddProduct{},
-		
 	)
 	if err != nil {
 		log.Fatal("error to migrate step")
@@ -54,3 +51,5 @@ func Connect() {
 	}
 
 }
+
+// BOXTAN PRODUCTA ÜRÜN ID 'Sİ VER PRODYUCTTAN ÜRÜN BİLGİSİ DÖN

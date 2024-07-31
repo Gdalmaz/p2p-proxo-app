@@ -38,8 +38,8 @@ func Connect() {
 	log.Println("connected success")
 	db.Logger = logger.Default.LogMode(logger.Info)
 	log.Println("running migrations")
-	err = db.AutoMigrate(&models.User{},
-		&models.Session{},
+	err = db.AutoMigrate(
+
 		&models.Club{},
 		&models.VerifyUpdate{},
 		&models.VerifyDelete{},

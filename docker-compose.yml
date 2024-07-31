@@ -1,26 +1,17 @@
 version: "3"
-services:
+services:  
   nginx:
-    image: nginx
+    image: nginx:latest
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:8080"
     volumes:
-      - ./nginx/recipe.conf:/etc/nginx/conf.d/recipe.conf
-    depends_on:
-      - Auth-App
-      - app_postgres
-      - Box-App
-      - Market-App
-      - Product-App
-      - Recipe-App
-      - App-Gateway
+      - ./nginx/default.conf:/etc/nginx/default.conf
     networks:
       - app_network
 
   app_postgres:
     image: postgres:latest
-    restart: no
+    restart: always
     ports:
       - "5432:5432"
     environment:
@@ -32,105 +23,149 @@ services:
     networks:
       - app_network
 
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app_network
+
+
   Auth-App:
+    container_name: auth-app
     image: cosmtrek/air:v1.44.0
-    restart: no
+    restart: always
     working_dir: /app
     volumes:
      - ./Auth-App:/app
      - ./.env:/app/.env
     ports:
-      - "9090:80"
+      - "9090:9090"
     depends_on:
       - app_postgres
-    environment:
-      GOFLAGS: "-buildvcs=false"
-    networks:
-      - app_network 
-
-  App-Gateway:
-    image: cosmtrek/air:v1.44.0
-    restart: no
-    working_dir: /app
-    volumes:
-      - ./App-Gateway:/app
-    ports:
-      - "9095:80"
-    depends_on:
-      - app_postgres
+      - rabbitmq
     environment:
       GOFLAGS: "-buildvcs=false"
     networks:
       - app_network
 
+  App-Gateway:
+    build: ./App-Gateway
+    image: cosmtrek/air:v1.44.0
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./App-Gateway:/app
+    ports:
+      - "9095:9095"
+    depends_on:
+      - Auth-App
+      - Recipe-App
+      - rabbitmq
+    networks:
+      - app_network
+
   Recipe-App:
     image: cosmtrek/air:v1.44.0
-    restart: no
+    restart: always
     working_dir: /app
     volumes:
      - ./Recipe-App:/app
      - ./.env:/app/.env
     ports:
-      - "9091:80"
+      - "9091:9091"
     depends_on:
       - app_postgres
+      - rabbitmq
     environment:
       GOFLAGS: "-buildvcs=false"
     networks:
-      - app_network 
+      - app_network
 
   Market-App:
     image: cosmtrek/air:v1.44.0
-    restart: no
+    restart: always
     working_dir: /app
     volumes:
      - ./Market-App:/app
      - ./.env:/app/.env
     ports:
-      - "9092:80"
+      - "9092:9092"
     depends_on:
       - app_postgres
+      - rabbitmq
+      - logger-service
     environment:
       GOFLAGS: "-buildvcs=false"
     networks:
-      - app_network 
-
+      - app_network
 
   Product-App:
     image: cosmtrek/air:v1.44.0
-    restart: no
+    restart: always
     working_dir: /app
     volumes:
      - ./Product-App:/app
      - ./.env:/app/.env
     ports:
-      - "9093:80"
+      - "9093:9093"
     depends_on:
       - app_postgres
+      - rabbitmq
     environment:
       GOFLAGS: "-buildvcs=false"
     networks:
-      - app_network 
+      - app_network
 
   Box-App:
     image: cosmtrek/air:v1.44.0
-    restart: no
+    restart: always
     working_dir: /app
     volumes:
      - ./Box-App:/app
      - ./.env:/app/.env
     ports:
-      - "9094:80"
+      - "9094:9094"
     depends_on:
       - app_postgres
+      - rabbitmq
+      - logger-service
     environment:
       GOFLAGS: "-buildvcs=false"
     networks:
-      - app_network 
-      
+      - app_network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.0.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "xpack.security.enabled=false"
+      - "xpack.security.http.ssl.enabled=false"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - app_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - elasticsearch
+    networks:
+      - app_network
+
   redis:
     image: redis:latest
-    restart: no
+    restart: always
     ports:
       - "6379:6379"
     volumes:
@@ -139,18 +174,29 @@ services:
       - app_network
 
 
-  rabbitmq:
-    image: rabbitmq:latest
-    restart: no
+
+
+  logger-service:
+    build: ./Logger-Service
+    image: cosmtrek/air:v1.44.0
+    restart: always
+    working_dir: /app
+    volumes:
+     - ./Logger-Service:/app
+     - ./.env:/app/.env
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "9096:9096"
+    depends_on:
+      - rabbitmq
     networks:
       - app_network
+
+
 
 volumes:
   app_postgres_vol:
   redis_data:
+  elasticsearch_data:
 
 networks:
   app_network:

@@ -12,6 +12,9 @@ func BoxRouters(app *fiber.App) {
 	v1 := api.Group("/v1")
 	box := v1.Group("/box")
 
-	box.Post("/add-product-to-box", middleware.TokenControl(),controllers.AddProductToBox)
-	box.Delete("/delete-product-to-box", middleware.TokenControl(),controllers.DeleteProductToBox)
+	box.Post("/create-box", middleware.TokenControl(), controllers.CreateBoxFirstShop)
+	box.Put("/update-box-info", middleware.TokenControl(), controllers.UpdateBoxInfo)
+	box.Post("/add-product-to-box/:id", middleware.TokenControl(), controllers.AddProductToBox)
+	box.Put("/update-to-product-in-box/:id", middleware.TokenControl(), controllers.UpdateBoxProduct)
+	box.Delete("/delete-product-to-box/:id", middleware.TokenControl(), controllers.DeleteProductToBox)
 }
