@@ -12,7 +12,7 @@ import (
 
 // RabbitMqPublish publishes a message to a specified queue
 func RabbitMqPublish(msg []byte, queueName string) error {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	if err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ: %v", err)
 	}
@@ -58,7 +58,7 @@ func RabbitMqPublish(msg []byte, queueName string) error {
 
 // RabbitMqConsume consumes messages from a specified queue and sends emails
 func RabbitMqConsume(queueName, sender string) error {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}

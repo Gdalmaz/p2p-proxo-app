@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"auth/Auth-App/database"
-	"auth/Auth-App/models"
+	"auth/database"
+	"auth/models"
 
 	"github.com/gofiber/fiber/v2"
 )

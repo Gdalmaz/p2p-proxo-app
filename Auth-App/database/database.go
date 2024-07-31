@@ -1,7 +1,7 @@
 package database
 
 import (
-	"auth/Auth-App/models"
+	"auth/models"
 	"fmt"
 	"log"
 	"os"
@@ -38,7 +38,12 @@ func Connect() {
 	log.Println("connected success")
 	db.Logger = logger.Default.LogMode(logger.Info)
 	log.Println("running migrations")
-	err = db.AutoMigrate(&models.User{}, &models.Session{}, &models.Code{}, &models.VerifySession{}, &models.DeleteCode{} ,&models.ForgotPassword{})
+	err = db.AutoMigrate(&models.User{},
+		&models.Session{},
+		&models.Code{},
+		&models.VerifySession{},
+		&models.DeleteCode{},
+		&models.ForgotPassword{})
 	if err != nil {
 		log.Fatal("error to migrate step")
 	}

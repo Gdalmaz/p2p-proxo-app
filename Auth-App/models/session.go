@@ -6,7 +6,6 @@ type Session struct {
 	IsActive bool   `gorm:"default:true"`
 }
 
-
 type VerifySession struct {
 	UserID   int    `gorm:"primaryKey;autoIncrement`
 	Token    string `json:"token"`

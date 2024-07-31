@@ -1,5 +1,23 @@
 version: "3"
 services:
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/recipe.conf:/etc/nginx/conf.d/recipe.conf
+    depends_on:
+      - Auth-App
+      - app_postgres
+      - Box-App
+      - Market-App
+      - Product-App
+      - Recipe-App
+      - App-Gateway
+    networks:
+      - app_network
+
   app_postgres:
     image: postgres:latest
     restart: no
@@ -29,6 +47,97 @@ services:
       GOFLAGS: "-buildvcs=false"
     networks:
       - app_network 
+
+  App-Gateway:
+    image: cosmtrek/air:v1.44.0
+    restart: no
+    working_dir: /app
+    volumes:
+      - ./App-Gateway:/app
+    ports:
+      - "9095:80"
+    depends_on:
+      - app_postgres
+    environment:
+      GOFLAGS: "-buildvcs=false"
+    networks:
+      - app_network
+
+  Recipe-App:
+    image: cosmtrek/air:v1.44.0
+    restart: no
+    working_dir: /app
+    volumes:
+     - ./Recipe-App:/app
+     - ./.env:/app/.env
+    ports:
+      - "9091:80"
+    depends_on:
+      - app_postgres
+    environment:
+      GOFLAGS: "-buildvcs=false"
+    networks:
+      - app_network 
+
+  Market-App:
+    image: cosmtrek/air:v1.44.0
+    restart: no
+    working_dir: /app
+    volumes:
+     - ./Market-App:/app
+     - ./.env:/app/.env
+    ports:
+      - "9092:80"
+    depends_on:
+      - app_postgres
+    environment:
+      GOFLAGS: "-buildvcs=false"
+    networks:
+      - app_network 
+
+
+  Product-App:
+    image: cosmtrek/air:v1.44.0
+    restart: no
+    working_dir: /app
+    volumes:
+     - ./Product-App:/app
+     - ./.env:/app/.env
+    ports:
+      - "9093:80"
+    depends_on:
+      - app_postgres
+    environment:
+      GOFLAGS: "-buildvcs=false"
+    networks:
+      - app_network 
+
+  Box-App:
+    image: cosmtrek/air:v1.44.0
+    restart: no
+    working_dir: /app
+    volumes:
+     - ./Box-App:/app
+     - ./.env:/app/.env
+    ports:
+      - "9094:80"
+    depends_on:
+      - app_postgres
+    environment:
+      GOFLAGS: "-buildvcs=false"
+    networks:
+      - app_network 
+      
+  redis:
+    image: redis:latest
+    restart: no
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+
 
   rabbitmq:
     image: rabbitmq:latest

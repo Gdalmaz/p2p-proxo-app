@@ -1,11 +1,11 @@
 package controllers
 
 import (
-	"auth/Auth-App/config"
-	"auth/Auth-App/database"
-	"auth/Auth-App/helpers"
-	"auth/Auth-App/middleware"
-	"auth/Auth-App/models"
+	"auth/config"
+	"auth/database"
+	"auth/helpers"
+	"auth/middleware"
+	"auth/models"
 	"strconv"
 	"time"
 
@@ -16,21 +16,21 @@ func SignUp(c *fiber.Ctx) error {
 	user := new(models.User)
 	err := c.BodyParser(&user)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error bodyparsing step"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "S-U-1"})
 	}
 	mailControl, _ := helpers.MailControl(user.Mail)
 	if mailControl == true {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "you already have this account on this mail"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "S-U-2"})
 	}
 	phoneControl, _ := helpers.PhoneControl(user.Mail)
 	if phoneControl == true {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "you already have this account on this phone number"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "S-U-3"})
 	}
 	user.Password = helpers.HashPass(user.Password)
 
 	err = database.DB.Db.Create(&user).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not creating user table", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "S-U-4"})
 	}
 	var codeGenerator models.Code
 	code := helpers.GenerateRandomNumber()
@@ -39,68 +39,68 @@ func SignUp(c *fiber.Ctx) error {
 	codeStr := strconv.Itoa(code)
 	err = config.RabbitMqPublish([]byte(codeStr), user.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error publishing code step"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "S-U-5", "data": err.Error()})
 	}
 	err = config.RabbitMqConsume(user.Mail, user.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error consume code step"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "S-U-6"})
 	}
 	err = database.DB.Db.Create(&codeGenerator).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error... not creating code table", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "S-U-7"})
 	}
 
 	var verifySession models.VerifySession
 	token, err := middleware.CreateToken(user.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not creating token", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "S-U-8"})
 	}
 	verifySession.UserID = user.ID
 	verifySession.Token = token
 	err = database.DB.Db.Create(&verifySession).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not creating token data", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "S-U-9"})
 	}
-	return c.Status(202).JSON(fiber.Map{"status": "succes", "message": "successfully creating your log"})
+	return c.Status(202).JSON(fiber.Map{"status": "Success", "message": "Success"})
 }
 
 func LastStepSignUp(c *fiber.Ctx) error {
 	verifysession, ok := c.Locals("user").(models.User)
 	if !ok {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "haven't got account ... Please Sign Up"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "L-S-S-U-1"})
 	}
 
 	var inputCode models.InputCode
 	err := c.BodyParser(&inputCode)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error input code bodyparsing step"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "L-S-S-U-2"})
 	}
 
 	var systemCode models.Code
 	err = database.DB.Db.Where("user_id=?", verifysession.ID).First(&systemCode).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not founded code"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "L-S-S-U-3"})
 	}
 	inputCode.SendingCode = systemCode.Code
 	if inputCode.UserInputCode != inputCode.SendingCode {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "you have to input sample where we sending code"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "L-S-S-U-4"})
 	}
 
 	verifysession.IsActive = true
 	var searchtabletoken models.VerifySession
 	err = database.DB.Db.Where("id=?", verifysession.ID).Save(&verifysession).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error... update user database", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "L-S-S-U-5"})
 	}
 	err = database.DB.Db.Where("user_id=?", verifysession.ID).Delete(&searchtabletoken).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... your verify token not deleted", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "L-S-S-U-6"})
 	}
 	err = database.DB.Db.Where("user_id=?", verifysession.ID).Delete(&systemCode).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... your code not deleted on system", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "L-S-S-U-7"})
 	}
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "your profile update to active successfully", "data": verifysession})
+	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": "Success", "data": verifysession})
 
 }
 
@@ -109,12 +109,12 @@ func LogIn(c *fiber.Ctx) error {
 	var login models.LogIn
 	err := c.BodyParser(&login)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... your body parser step"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "L-I-1"})
 	}
 	login.Password = helpers.HashPass(login.Password)
 	err = database.DB.Db.Where("mail=? and password=?", login.Mail, login.Password).First(&user).Error
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "your password or mail wrong"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "L-I-2"})
 	}
 
 	var session models.Session
@@ -124,46 +124,46 @@ func LogIn(c *fiber.Ctx) error {
 	err = database.DB.Db.Create(&session).Error
 
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... your token not created on table", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "L-I-3"})
 	}
 
 	//KULLANICIYI BİLGİLENDİRME
 	text := "login on your profile . LogIn Time : \t" + time.Now().Format("2006-01-02 15:04:05")
 	err = config.RabbitMqPublish([]byte(text), user.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not publishing mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "L-I-4"})
 	}
 	err = config.RabbitMqConsume(user.Mail, user.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not consuming mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "L-I-5"})
 	}
 
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "your login successfully"})
+	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": "Success"})
 }
 
 func UpdateAccount(c *fiber.Ctx) error {
 	user, ok := c.Locals("user").(models.User)
 	if !ok {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not founded token"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "U-A-1"})
 	}
 
 	err := c.BodyParser(&user)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error...not founded token"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "U-A-2"})
 	}
 
 	err = database.DB.Db.Where("id=?", user.ID).Updates(&user).Error
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "error ... update fail", "data": err.Error()})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "U-A-3"})
 	}
 	text := "Your profile information updated"
 	err = config.RabbitMqPublish([]byte(text), user.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not publishing your mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "U-A-4"})
 	}
 	err = config.RabbitMqConsume(user.Mail, user.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not consuming your mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "U-A-5"})
 	}
 	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "your profile updated successfully", "data": user})
 }
@@ -171,20 +171,20 @@ func UpdateAccount(c *fiber.Ctx) error {
 func UpdatePassword(c *fiber.Ctx) error {
 	user, ok := c.Locals("user").(models.User)
 	if !ok {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "error ... your token not founded"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "U-P-1"})
 	}
 	var updateinfo models.UpdatePassword
 	err := c.BodyParser(&updateinfo)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... body parsing step is failed"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "U-P-2"})
 	}
 	user.Password = helpers.HashPass(user.Password)
 	updateinfo.OldPassword = user.Password
 	if updateinfo.OldPassword != user.Password {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "error ... your passwords not equals each other"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "U-P-3"})
 	}
 	if updateinfo.NewPassword1 != updateinfo.NewPassword2 {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "error ... your new passwords not equals each other"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "U-P-4"})
 	}
 
 	user.Password = updateinfo.NewPassword1
@@ -192,38 +192,38 @@ func UpdatePassword(c *fiber.Ctx) error {
 	user.Password = helpers.HashPass(user.Password)
 	err = database.DB.Db.Where("id=?", user.ID).Updates(&user).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... your password not updated successfully", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "U-P-5"})
 	}
 
 	text := "Your password updated . Your new password is : \n\t\t" + sendmailinuserpassword
 
 	err = config.RabbitMqPublish([]byte(text), user.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not publishing your mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "U-P-6"})
 	}
 	err = config.RabbitMqConsume(user.Mail, user.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not consuming your mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "U-P-7"})
 	}
-	return c.Status(200).JSON(fiber.Map{"status": "error", "message": "your password updated successfully"})
+	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": "Success"})
 }
 
 func LogOut(c *fiber.Ctx) error {
 	user, ok := c.Locals("user").(models.User)
 	if !ok {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "user token not found"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "L-O-1"})
 	}
 	var session models.Session
 	err := database.DB.Db.Where("user_id=?", user.ID).Delete(&session).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... your token not deleted on table", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "L-O-2"})
 	}
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "your logout successfully"})
+	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": "Success"})
 }
 func DeleteAccountSendMail(c *fiber.Ctx) error {
 	user, ok := c.Locals("user").(models.User)
 	if !ok {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... your token not founded"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "D-A-S-M-1"})
 	}
 	// kullanıcının hesabına mail yollama işlemi güvenlik zaafiyeti
 	var sendingCode models.DeleteCode
@@ -233,37 +233,37 @@ func DeleteAccountSendMail(c *fiber.Ctx) error {
 	sendingCode.UserID = user.ID
 	err := config.RabbitMqPublish([]byte(codeStr), user.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... error publish mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "D-A-S-M-2"})
 	}
 	err = config.RabbitMqConsume(user.Mail, user.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... error consuming mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "D-A-S-M-3"})
 	}
 	err = database.DB.Db.Create(&sendingCode).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... your code not save "})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "D-A-S-M-4"})
 	}
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "check your mailbox"})
+	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": "Success"})
 }
 
 func DeleteAccountVerifyMail(c *fiber.Ctx) error {
 	user, ok := c.Locals("user").(models.User)
 	if !ok {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "error ... your token not found"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "D-A-V-M-1"})
 	}
 	var sendingCode models.DeleteCode
 	err := database.DB.Db.Where("user_id=?", user.ID).Find(&sendingCode).Error
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "you code not found"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "D-A-V-M-2"})
 	}
 	var inputCode models.InputCode
 	err = c.BodyParser(&inputCode)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... body parser step"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "D-A-V-M-3"})
 	}
 	inputCode.SendingCode = sendingCode.Code
 	if inputCode.UserInputCode != inputCode.SendingCode {
-		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "you have to input sample code which we sending mailbox"})
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "D-A-V-M-4"})
 	}
 
 	text := "Your profile deleted successfully . Thank you for your services " + time.Now().Format("2006-01-02 15:04:05")
@@ -272,26 +272,26 @@ func DeleteAccountVerifyMail(c *fiber.Ctx) error {
 	var session models.Session
 	err = database.DB.Db.Where("user_id=?", user.ID).Delete(&session).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... failed to deleting your session"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "D-A-V-M-5"})
 	}
 	err = database.DB.Db.Where("user_id=?", user.ID).Delete(&sendingCode).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... failed to deleteing your codes"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "D-A-V-M-6"})
 	}
 
 	err = database.DB.Db.Where("id=?", user.ID).Delete(&user).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... failed to deleting your data", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "D-A-V-M-7"})
 	}
 	err = config.RabbitMqPublish([]byte(text), mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... failed to publishing your mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "D-A-V-M-8"})
 	}
 	err = config.RabbitMqConsume(mail, mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... failed to consuming your mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "D-A-V-M-9"})
 	}
-	return c.Status(200).JSON(fiber.Map{"status": "success", "mesage": "successfull your delete data"})
+	return c.Status(200).JSON(fiber.Map{"status": "Success", "mesage": "Success"})
 }
 
 func ForgotPasswordSendCode(c *fiber.Ctx) error {
@@ -299,72 +299,72 @@ func ForgotPasswordSendCode(c *fiber.Ctx) error {
 	var forgotpassword models.ForgotPassword
 	err := c.BodyParser(&forgotpassword)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "ERROR CODE F-P-S-1"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "F-P-S-1"})
 	}
 	err = database.DB.Db.Where("mail=?", forgotpassword.Mail).Find(&user).Error
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "error ... we not found mail for sign users"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "F-P-S-2"})
 	}
 	code := helpers.GenerateRandomNumber()
 	forgotpassword.UserID = user.ID
 	forgotpassword.Code = code
 	token, err := middleware.CreateToken(forgotpassword.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... unsuccessfull creat token"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "F-P-S-3"})
 	}
 	forgotpassword.Token = token
 	codeStr := strconv.Itoa(code)
 	err = config.RabbitMqPublish([]byte(codeStr), forgotpassword.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... failed to publish your mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "F-P-S-4"})
 	}
 	err = config.RabbitMqConsume(forgotpassword.Mail, forgotpassword.Mail)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... failed to consume your mail"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "F-P-S-5"})
 	}
 	err = database.DB.Db.Create(&forgotpassword).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... failed to create steps"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "F-P-S-6"})
 	}
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "check your mailbox please"})
+	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": "Success"})
 }
 
 func ForgotPasswordVerifyAndReset(c *fiber.Ctx) error {
 	// Forgot password bilgilerini al
 	forgotpassword, ok := c.Locals("user").(models.ForgotPassword)
 	if !ok {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... not found token"})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "F-P-V-A-R-1"})
 	}
 
 	// Body'den updatepassword bilgilerini al
 	var updatepassword models.UpdateForgottenPassword
 	err := c.BodyParser(&updatepassword)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... error update password body parsing step", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "F-P-V-A-R-2"})
 	}
 
 	// Kod doğrulaması yap
 	if forgotpassword.Code != updatepassword.Code {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "you should input sample code where we send your mailbox"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "F-P-V-A-R-3"})
 	}
 
 	// Şifre doğrulaması yap
 	if updatepassword.Password1 != updatepassword.Password2 {
-		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "you should input sample password"})
+		return c.Status(404).JSON(fiber.Map{"status": "error", "message": "F-P-V-A-R-4"})
 	}
 
 	// Kullanıcıyı güncelle
 	var user models.User
 	err = database.DB.Db.Where("id=?", forgotpassword.UserID).First(&user).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... user not found", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "F-P-V-A-R-5"})
 	}
 	updatepassword.Password1 = helpers.HashPass(updatepassword.Password1)
-	user.Password = updatepassword.Password1  // Yeni şifreyi ayarla
-	err = database.DB.Db.Updates(&user).Error // Kullanıcıyı güncelle
+	user.Password = updatepassword.Password1
+	err = database.DB.Db.Updates(&user).Error
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "error ... failed to update password", "data": err.Error()})
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "F-P-V-A-R-6"})
 	}
 
-	return c.Status(200).JSON(fiber.Map{"status": "success", "message": "your password update successfully"})
+	return c.Status(200).JSON(fiber.Map{"status": "Success", "message": "Success"})
 }

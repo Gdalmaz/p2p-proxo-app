@@ -1,8 +1,8 @@
 package main
 
 import (
-	"auth/Auth-App/database"
-	"auth/Auth-App/routers"
+	"auth/database"
+	"auth/routers"
 
 	"github.com/gofiber/fiber/v2"
 )

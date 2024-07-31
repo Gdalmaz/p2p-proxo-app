@@ -9,8 +9,6 @@ type User struct {
 	IsActive bool   `gorm:"default:false"`
 }
 
-
-
 type LogIn struct {
 	Mail     string `json:"mail"`
 	Password string `json:"password"`

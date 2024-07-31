@@ -1,8 +1,8 @@
 package routers
 
 import (
-	"auth/Auth-App/controllers"
-	"auth/Auth-App/middleware"
+	"auth/controllers"
+	"auth/middleware"
 
 	"github.com/gofiber/fiber/v2"
 )

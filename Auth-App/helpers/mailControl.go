@@ -1,8 +1,8 @@
 package helpers
 
 import (
-	"auth/Auth-App/database"
-	"auth/Auth-App/models"
+	"auth/database"
+	"auth/models"
 )
 
 func MailControl(mail string) (bool, error) {
